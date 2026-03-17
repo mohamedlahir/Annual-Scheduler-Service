@@ -21,6 +21,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface TutorLeaveRepository
         extends JpaRepository<TutorLeave, Long> {
@@ -34,6 +35,12 @@ public interface TutorLeaveRepository
 
     // ✅ Used by TutorSelectionService (FAST boolean check)
     boolean existsByTutorIdAndApprovedTrueAndFromDateLessThanEqualAndToDateGreaterThanEqual(
+            String tutorId,
+            LocalDate fromDate,
+            LocalDate toDate
+    );
+
+    Optional<TutorLeave> findByTutorIdAndFromDateAndToDateAndApprovedTrue(
             String tutorId,
             LocalDate fromDate,
             LocalDate toDate

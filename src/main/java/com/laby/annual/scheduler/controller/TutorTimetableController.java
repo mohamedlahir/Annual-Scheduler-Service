@@ -1,11 +1,12 @@
 package com.laby.annual.scheduler.controller;
 
-import com.laby.annual.scheduler.entity.TimetableEntry;
+import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
 import com.laby.annual.scheduler.entity.Tutor;
-import com.laby.annual.scheduler.repository.TimetableEntryRepository;
 import com.laby.annual.scheduler.repository.TutorRepository;
 import com.laby.annual.scheduler.security.JWTService;
+import com.laby.annual.scheduler.service.AnnualTimetableQueryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -24,13 +26,15 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class TutorTimetableController {
 
-    private final TimetableEntryRepository timetableEntryRepository;
+    private final AnnualTimetableQueryService annualTimetableQueryService;
     private final TutorRepository tutorRepository;
     private final JWTService jwtService;
 
     @GetMapping
-    public ResponseEntity<List<TimetableEntry>> getTutorTimetable(
-            @RequestParam Long weeklyTimetableId,
+    public ResponseEntity<List<AnnualTimetableEntry>> getTutorTimetable(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate academicYearStart,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate academicYearEnd,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate,
             @RequestParam(required = false) String tutorId,
             HttpServletRequest request
     ) {
@@ -52,12 +56,13 @@ public class TutorTimetableController {
         }
 
         return ResponseEntity.ok(
-                timetableEntryRepository
-                        .findByWeeklyTimetableIdAndSchoolIdAndTutorIdInOrderByDayOfWeekAscPeriodNumberAsc(
-                                weeklyTimetableId,
-                                schoolId,
-                                new ArrayList<>(tutorCandidates)
-                        )
+                annualTimetableQueryService.getTutorTimetable(
+                        schoolId,
+                        new ArrayList<>(tutorCandidates),
+                        academicYearStart,
+                        academicYearEnd,
+                        targetDate
+                )
         );
     }
 
