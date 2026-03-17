@@ -3,13 +3,18 @@ package com.laby.annual.scheduler.controller;
 import com.laby.annual.scheduler.DTO.AcademicYearOptionDTO;
 import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
 import com.laby.annual.scheduler.repository.AnnualTimetableEntryRepository;
+import com.laby.annual.scheduler.repository.TutorRepository;
+import com.laby.annual.scheduler.service.AnnualTimetableQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/scheduler/api/admin/timetable")
@@ -17,6 +22,8 @@ import java.util.List;
 public class AdminTimetableQueryController {
 
     private final AnnualTimetableEntryRepository annualTimetableEntryRepository;
+    private final AnnualTimetableQueryService annualTimetableQueryService;
+    private final TutorRepository tutorRepository;
 
     @GetMapping("/years")
     public ResponseEntity<List<AcademicYearOptionDTO>> getAvailableAcademicYears(
@@ -36,16 +43,19 @@ public class AdminTimetableQueryController {
             LocalDate academicYearStart,
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate academicYearEnd
+            LocalDate academicYearEnd,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate targetDate
     ) {
         return ResponseEntity.ok(
-                annualTimetableEntryRepository
-                        .findBySchoolIdAndClassRoomIdAndAcademicYearStartAndAcademicYearEndAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
-                                schoolId,
-                                classRoomId,
-                                academicYearStart,
-                                academicYearEnd
-                        )
+                annualTimetableQueryService.getClassTimetable(
+                        schoolId,
+                        classRoomId,
+                        academicYearStart,
+                        academicYearEnd,
+                        targetDate
+                )
         );
     }
 
@@ -71,7 +81,33 @@ public class AdminTimetableQueryController {
     }
 
     @GetMapping("/tutor")
-    public String hello() {
-        return "Hello, Admin Timetable!";
+    public ResponseEntity<List<AnnualTimetableEntry>> getTutorTimetable(
+            @RequestParam Long schoolId,
+            @RequestParam String tutorId,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate targetDate
+    ) {
+        Set<String> tutorCandidates = new LinkedHashSet<>();
+        String normalized = tutorId.trim();
+        tutorCandidates.add(normalized);
+        tutorRepository.findByTutorCode(normalized).map(com.laby.annual.scheduler.entity.Tutor::getTutorId).ifPresent(tutorCandidates::add);
+        tutorRepository.findByTutorId(normalized).map(com.laby.annual.scheduler.entity.Tutor::getTutorCode).ifPresent(tutorCandidates::add);
+
+        return ResponseEntity.ok(
+                annualTimetableQueryService.getTutorTimetable(
+                        schoolId,
+                        new ArrayList<>(tutorCandidates),
+                        academicYearStart,
+                        academicYearEnd,
+                        targetDate
+                )
+        );
     }
 }

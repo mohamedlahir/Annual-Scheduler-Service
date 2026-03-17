@@ -6,6 +6,7 @@ import com.laby.annual.scheduler.entity.AnnualTimetableSubstitution;
 import com.laby.annual.scheduler.entity.ClassRoom;
 import com.laby.annual.scheduler.entity.Subject;
 import com.laby.annual.scheduler.entity.Tutor;
+import com.laby.annual.scheduler.entity.TutorLeave;
 import com.laby.annual.scheduler.repository.AnnualTimetableEntryRepository;
 import com.laby.annual.scheduler.repository.AnnualTimetableSubstitutionRepository;
 import com.laby.annual.scheduler.repository.ClassRoomRepository;
@@ -140,6 +141,7 @@ public class AnnualTimetableService {
         }
 
         String absentTutorId = resolveTutorId(request.getTutorId(), schoolId, -1);
+        saveApprovedLeave(absentTutorId, request.getFromDate(), request.getToDate());
         List<Tutor> tutors = tutorRepository.findBySchoolIdAndActiveTrue(schoolId);
 
         int assigned = 0;
@@ -160,14 +162,10 @@ public class AnnualTimetableService {
                                 );
 
                 for (AnnualTimetableEntry entry : affectedEntries) {
-                    if (annualTimetableSubstitutionRepository.existsByAnnualEntryIdAndSubstitutionDate(entry.getId(), current)) {
-                        System.err.println("Affected Entries looped");
-                        continue;
-                    }
-
                     Optional<String> replacementTutorId = findReplacementTutor(tutors, entry, current);
-                    System.err.println("Replacement tutor search for entry " + entry.getId() + " on " + current + ": " + replacementTutorId);
-                    AnnualTimetableSubstitution substitution = new AnnualTimetableSubstitution();
+                    AnnualTimetableSubstitution substitution = annualTimetableSubstitutionRepository
+                            .findByAnnualEntryIdAndSubstitutionDate(entry.getId(), current)
+                            .orElseGet(AnnualTimetableSubstitution::new);
                     substitution.setAnnualEntryId(entry.getId());
                     substitution.setSchoolId(entry.getSchoolId());
                     substitution.setClassRoomId(entry.getClassRoomId());
@@ -176,7 +174,6 @@ public class AnnualTimetableService {
                     substitution.setOriginalTutorId(absentTutorId);
 
                     if (replacementTutorId.isPresent()) {
-                        System.err.println("Replacement tutor Found for entry " + entry.getId() + " on " + current + ": " + replacementTutorId.get());
                         substitution.setSubstituteTutorId(replacementTutorId.get());
                         substitution.setStatus(AnnualTimetableSubstitution.Status.ASSIGNED);
                         assigned++;
@@ -213,6 +210,8 @@ public class AnnualTimetableService {
         return tutors.stream()
                 .filter(t -> t != null && t.getTutorId() != null)
                 .filter(t -> !t.getTutorId().equals(entry.getTutorId()))
+                .filter(t -> entry.getSubjectId() == null
+                        || tutorSubjectRepository.existsByTutorIdAndSubjectId(t.getTutorId(), entry.getSubjectId()))
                 .filter(t -> !tutorLeaveRepository.existsByTutorIdAndApprovedTrueAndFromDateLessThanEqualAndToDateGreaterThanEqual(
                         t.getTutorId(), targetDate, targetDate
                 ))
@@ -242,7 +241,8 @@ public class AnnualTimetableService {
                     long substitutionLoad = annualTimetableSubstitutionRepository
                             .countBySubstituteTutorIdAndSubstitutionDate(t.getTutorId(), targetDate);
                     long total = baseLoad + substitutionLoad;
-                    return total < t.getMaxClassesPerDay();
+                    int maxClassesPerDay = t.getMaxClassesPerDay() > 0 ? t.getMaxClassesPerDay() : Integer.MAX_VALUE;
+                    return total < maxClassesPerDay;
                 })
                 .min(Comparator.comparingLong(t ->
                         annualTimetableEntryRepository
@@ -257,6 +257,17 @@ public class AnnualTimetableService {
                                 .countBySubstituteTutorIdAndSubstitutionDate(t.getTutorId(), targetDate)
                 ))
                 .map(Tutor::getTutorId);
+    }
+
+    private void saveApprovedLeave(String tutorId, LocalDate fromDate, LocalDate toDate) {
+        TutorLeave leave = tutorLeaveRepository
+                .findByTutorIdAndFromDateAndToDateAndApprovedTrue(tutorId, fromDate, toDate)
+                .orElseGet(TutorLeave::new);
+        leave.setTutorId(tutorId);
+        leave.setFromDate(fromDate);
+        leave.setToDate(toDate);
+        leave.setApproved(true);
+        tutorLeaveRepository.save(leave);
     }
 
     private Subject inferSubjectForUpload(Long classRoomId, Long schoolId, String tutorValue) {
