@@ -45,6 +45,7 @@ public class AnnualTimetableController {
     ) {
         Long schoolId = extractSchoolIdFromToken(authorization);
         Map<String, Object> response = annualTimetableService.applyLeaveSubstitution(schoolId, request);
+        System.err.println("Response from service for leave: " + response);
         return ResponseEntity.ok(response);
     }
 

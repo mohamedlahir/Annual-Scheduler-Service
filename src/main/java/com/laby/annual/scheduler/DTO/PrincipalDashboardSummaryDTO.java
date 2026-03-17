@@ -11,9 +11,8 @@ import java.time.LocalDate;
 public class PrincipalDashboardSummaryDTO {
 
     private Long schoolId;
-    private Long weeklyTimetableId;
-    private LocalDate weekStartDate;
-    private LocalDate weekEndDate;
+    private LocalDate academicYearStart;
+    private LocalDate academicYearEnd;
 
     private int activeDays;
 
