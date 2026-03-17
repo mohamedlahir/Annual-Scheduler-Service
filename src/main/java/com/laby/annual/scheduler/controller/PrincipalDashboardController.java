@@ -24,10 +24,13 @@ public class PrincipalDashboardController {
             @RequestParam Long schoolId,
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate weekStartDate
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd
     ) {
         return ResponseEntity.ok(
-                principalDashboardService.getDashboard(schoolId, weekStartDate)
+                principalDashboardService.getDashboard(schoolId, academicYearStart, academicYearEnd)
         );
     }
 
@@ -36,10 +39,13 @@ public class PrincipalDashboardController {
             @RequestParam Long schoolId,
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate weekStartDate
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd
     ) {
         return ResponseEntity.ok(
-                principalDashboardService.getDashboard(schoolId, weekStartDate).getSummary()
+                principalDashboardService.getDashboard(schoolId, academicYearStart, academicYearEnd).getSummary()
         );
     }
 
@@ -48,10 +54,13 @@ public class PrincipalDashboardController {
             @RequestParam Long schoolId,
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate weekStartDate
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd
     ) {
         return ResponseEntity.ok(
-                principalDashboardService.getDashboard(schoolId, weekStartDate).getTeachers()
+                principalDashboardService.getDashboard(schoolId, academicYearStart, academicYearEnd).getTeachers()
         );
     }
 }

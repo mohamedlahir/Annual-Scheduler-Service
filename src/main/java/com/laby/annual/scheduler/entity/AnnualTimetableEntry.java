@@ -36,6 +36,8 @@ public class AnnualTimetableEntry {
     private Long schoolId;
     private Long classRoomId;
 
+    private Long subjectId;
+    private String subjectName;
     private String tutorId;
 
     @Enumerated(EnumType.STRING)
@@ -46,5 +48,25 @@ public class AnnualTimetableEntry {
     private LocalDate academicYearStart;
     private LocalDate academicYearEnd;
 
+    @Enumerated(EnumType.STRING)
+    private Status status;
+
+    @Enumerated(EnumType.STRING)
+    private ConflictReason conflictReason;
+
     private boolean active = true;
+
+    public enum Status {
+        ASSIGNED,
+        REPLACED,
+        CONFLICT,
+        PENDING
+    }
+
+    public enum ConflictReason {
+        NO_SUBJECTS_FOR_GRADE,
+        SUBJECT_POOL_EXHAUSTED,
+        DAILY_SUBJECT_LIMIT_REACHED,
+        NO_TUTOR_AVAILABLE
+    }
 }

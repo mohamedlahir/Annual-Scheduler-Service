@@ -1,7 +1,9 @@
 package com.laby.annual.scheduler.repository;
 
+import com.laby.annual.scheduler.DTO.AcademicYearOptionDTO;
 import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -39,4 +41,36 @@ public interface AnnualTimetableEntryRepository extends JpaRepository<AnnualTime
             LocalDate date1,
             LocalDate date2
     );
+
+    List<AnnualTimetableEntry> findBySchoolIdAndClassRoomIdAndAcademicYearStartAndAcademicYearEndAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
+            Long schoolId,
+            Long classRoomId,
+            LocalDate academicYearStart,
+            LocalDate academicYearEnd
+    );
+
+    List<AnnualTimetableEntry> findBySchoolIdAndAcademicYearStartAndAcademicYearEndAndActiveTrue(
+            Long schoolId,
+            LocalDate academicYearStart,
+            LocalDate academicYearEnd
+    );
+
+    List<AnnualTimetableEntry> findBySchoolIdAndAcademicYearStartAndAcademicYearEndAndStatusAndActiveTrueOrderByClassRoomIdAscDayOfWeekAscPeriodNumberAsc(
+            Long schoolId,
+            LocalDate academicYearStart,
+            LocalDate academicYearEnd,
+            AnnualTimetableEntry.Status status
+    );
+
+    @Query("""
+        select distinct new com.laby.annual.scheduler.DTO.AcademicYearOptionDTO(
+            e.academicYearStart,
+            e.academicYearEnd
+        )
+        from AnnualTimetableEntry e
+        where e.schoolId = :schoolId
+          and e.active = true
+        order by e.academicYearStart desc, e.academicYearEnd desc
+    """)
+    List<AcademicYearOptionDTO> findDistinctAcademicYearsBySchoolId(Long schoolId);
 }

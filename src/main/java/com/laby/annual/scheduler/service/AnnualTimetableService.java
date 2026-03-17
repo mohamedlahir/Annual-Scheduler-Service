@@ -3,11 +3,16 @@ package com.laby.annual.scheduler.service;
 import com.laby.annual.scheduler.DTO.AnnualLeaveSubstitutionRequestDTO;
 import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
 import com.laby.annual.scheduler.entity.AnnualTimetableSubstitution;
+import com.laby.annual.scheduler.entity.ClassRoom;
+import com.laby.annual.scheduler.entity.Subject;
 import com.laby.annual.scheduler.entity.Tutor;
 import com.laby.annual.scheduler.repository.AnnualTimetableEntryRepository;
 import com.laby.annual.scheduler.repository.AnnualTimetableSubstitutionRepository;
+import com.laby.annual.scheduler.repository.ClassRoomRepository;
+import com.laby.annual.scheduler.repository.SubjectRepository;
 import com.laby.annual.scheduler.repository.TutorLeaveRepository;
 import com.laby.annual.scheduler.repository.TutorRepository;
+import com.laby.annual.scheduler.repository.TutorSubjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -34,8 +39,11 @@ public class AnnualTimetableService {
 
     private final AnnualTimetableEntryRepository annualTimetableEntryRepository;
     private final AnnualTimetableSubstitutionRepository annualTimetableSubstitutionRepository;
+    private final ClassRoomRepository classRoomRepository;
+    private final SubjectRepository subjectRepository;
     private final TutorRepository tutorRepository;
     private final TutorLeaveRepository tutorLeaveRepository;
+    private final TutorSubjectRepository tutorSubjectRepository;
 
     @Transactional
     public Map<String, Object> uploadAnnualTimetable(
@@ -77,6 +85,7 @@ public class AnnualTimetableService {
 
                 Long classRoomId = parseLong(getCellString(row.getCell(2)), "classId", i);
                 String defaultTutorValue = getCellString(row.getCell(3));
+                Subject inferredSubject = inferSubjectForUpload(classRoomId, schoolIdFromToken, defaultTutorValue);
 
                 for (int col = 4; col <= 9; col++) {
                     DayOfWeek day = mapDayByColumn(col);
@@ -92,11 +101,16 @@ public class AnnualTimetableService {
                     AnnualTimetableEntry entry = new AnnualTimetableEntry();
                     entry.setSchoolId(schoolIdFromToken);
                     entry.setClassRoomId(classRoomId);
+                    if (inferredSubject != null) {
+                        entry.setSubjectId(inferredSubject.getId());
+                        entry.setSubjectName(inferredSubject.getName());
+                    }
                     entry.setTutorId(tutorId);
                     entry.setDayOfWeek(day);
                     entry.setPeriodNumber(periodNumber);
                     entry.setAcademicYearStart(academicYearStart);
                     entry.setAcademicYearEnd(academicYearEnd);
+                    entry.setStatus(AnnualTimetableEntry.Status.ASSIGNED);
                     entry.setActive(true);
 
                     annualTimetableEntryRepository.save(entry);
@@ -147,11 +161,12 @@ public class AnnualTimetableService {
 
                 for (AnnualTimetableEntry entry : affectedEntries) {
                     if (annualTimetableSubstitutionRepository.existsByAnnualEntryIdAndSubstitutionDate(entry.getId(), current)) {
+                        System.err.println("Affected Entries looped");
                         continue;
                     }
 
                     Optional<String> replacementTutorId = findReplacementTutor(tutors, entry, current);
-
+                    System.err.println("Replacement tutor search for entry " + entry.getId() + " on " + current + ": " + replacementTutorId);
                     AnnualTimetableSubstitution substitution = new AnnualTimetableSubstitution();
                     substitution.setAnnualEntryId(entry.getId());
                     substitution.setSchoolId(entry.getSchoolId());
@@ -161,6 +176,7 @@ public class AnnualTimetableService {
                     substitution.setOriginalTutorId(absentTutorId);
 
                     if (replacementTutorId.isPresent()) {
+                        System.err.println("Replacement tutor Found for entry " + entry.getId() + " on " + current + ": " + replacementTutorId.get());
                         substitution.setSubstituteTutorId(replacementTutorId.get());
                         substitution.setStatus(AnnualTimetableSubstitution.Status.ASSIGNED);
                         assigned++;
@@ -241,6 +257,33 @@ public class AnnualTimetableService {
                                 .countBySubstituteTutorIdAndSubstitutionDate(t.getTutorId(), targetDate)
                 ))
                 .map(Tutor::getTutorId);
+    }
+
+    private Subject inferSubjectForUpload(Long classRoomId, Long schoolId, String tutorValue) {
+        if (classRoomId == null || isBlank(tutorValue)) {
+            return null;
+        }
+
+        Optional<ClassRoom> classRoomOpt = classRoomRepository.findById(classRoomId);
+        if (classRoomOpt.isEmpty()) {
+            return null;
+        }
+
+        String tutorId = resolveTutorId(tutorValue, schoolId, -1);
+        List<Long> candidateSubjectIds = tutorSubjectRepository.findByTutorId(tutorId)
+                .stream()
+                .map(ts -> subjectRepository.findById(ts.getSubjectId()).orElse(null))
+                .filter(Objects::nonNull)
+                .filter(subject -> Objects.equals(subject.getSchoolId(), schoolId))
+                .filter(subject -> Objects.equals(subject.getGrade(), classRoomOpt.get().getGrade()))
+                .map(Subject::getId)
+                .toList();
+
+        if (candidateSubjectIds.size() != 1) {
+            return null;
+        }
+
+        return subjectRepository.findById(candidateSubjectIds.get(0)).orElse(null);
     }
 
     private void validateDateRange(LocalDate academicYearStart, LocalDate academicYearEnd) {

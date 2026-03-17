@@ -17,3 +17,5 @@ public interface AnnualTimetableSubstitutionRepository extends JpaRepository<Ann
 
     long countBySubstituteTutorIdAndSubstitutionDate(String substituteTutorId, LocalDate substitutionDate);
 }
+
+

@@ -98,9 +98,6 @@ public class TimetableGenerationService {
                 school.getId(),
                 classRoom.getGrade()
         );
-        if (subjects.isEmpty()) {
-            return;
-        }
 
         Map<Long, Subject> subjectById = new HashMap<>();
         Map<Long, Integer> remainingBySubjectId = new HashMap<>();
@@ -154,7 +151,21 @@ public class TimetableGenerationService {
                     daySubjectCounts.computeIfAbsent(day, d -> new HashMap<>());
 
             for (int period = 1; period <= periodsPerDay; period++) {
+                AnnualTimetableEntry annualEntry = new AnnualTimetableEntry();
+                annualEntry.setSchoolId(school.getId());
+                annualEntry.setClassRoomId(classRoom.getId());
+                annualEntry.setDayOfWeek(day);
+                annualEntry.setPeriodNumber(period);
+                annualEntry.setAcademicYearStart(academicYearStart);
+                annualEntry.setAcademicYearEnd(academicYearEnd);
+                annualEntry.setActive(true);
+
                 if (subjectPool.isEmpty()) {
+                    annualEntry.setStatus(AnnualTimetableEntry.Status.CONFLICT);
+                    annualEntry.setConflictReason(subjects.isEmpty()
+                            ? AnnualTimetableEntry.ConflictReason.NO_SUBJECTS_FOR_GRADE
+                            : AnnualTimetableEntry.ConflictReason.SUBJECT_POOL_EXHAUSTED);
+                    annualTimetableEntryRepository.save(annualEntry);
                     continue;
                 }
 
@@ -171,8 +182,14 @@ public class TimetableGenerationService {
                 }
 
                 if (subjectId == null) {
+                    annualEntry.setStatus(AnnualTimetableEntry.Status.CONFLICT);
+                    annualEntry.setConflictReason(AnnualTimetableEntry.ConflictReason.DAILY_SUBJECT_LIMIT_REACHED);
+                    annualTimetableEntryRepository.save(annualEntry);
                     continue;
                 }
+
+                annualEntry.setSubjectId(subjectId);
+                annualEntry.setSubjectName(subjectById.get(subjectId).getName());
 
                 String tutorId = selectTutorForAnnualSlot(
                         school.getId(),
@@ -184,18 +201,15 @@ public class TimetableGenerationService {
                 );
 
                 if (tutorId == null) {
+                    annualEntry.setStatus(AnnualTimetableEntry.Status.CONFLICT);
+                    annualEntry.setConflictReason(AnnualTimetableEntry.ConflictReason.NO_TUTOR_AVAILABLE);
+                    annualTimetableEntryRepository.save(annualEntry);
                     continue;
                 }
 
-                AnnualTimetableEntry annualEntry = new AnnualTimetableEntry();
-                annualEntry.setSchoolId(school.getId());
-                annualEntry.setClassRoomId(classRoom.getId());
                 annualEntry.setTutorId(tutorId);
-                annualEntry.setDayOfWeek(day);
-                annualEntry.setPeriodNumber(period);
-                annualEntry.setAcademicYearStart(academicYearStart);
-                annualEntry.setAcademicYearEnd(academicYearEnd);
-                annualEntry.setActive(true);
+                annualEntry.setStatus(AnnualTimetableEntry.Status.ASSIGNED);
+                annualEntry.setConflictReason(null);
                 annualTimetableEntryRepository.save(annualEntry);
             }
         }

@@ -1,11 +1,8 @@
 package com.laby.annual.scheduler.controller;
 
-import com.laby.annual.scheduler.entity.TimetableEntry;
-import com.laby.annual.scheduler.entity.Tutor;
-import com.laby.annual.scheduler.entity.WeeklyTimetable;
-import com.laby.annual.scheduler.repository.TimetableEntryRepository;
-import com.laby.annual.scheduler.repository.TutorRepository;
-import com.laby.annual.scheduler.repository.WeeklyTimetableRepository;
+import com.laby.annual.scheduler.DTO.AcademicYearOptionDTO;
+import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
+import com.laby.annual.scheduler.repository.AnnualTimetableEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -19,27 +16,56 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminTimetableQueryController {
 
-    private final WeeklyTimetableRepository weeklyTimetableRepository;
-    private final TimetableEntryRepository timetableEntryRepository;
+    private final AnnualTimetableEntryRepository annualTimetableEntryRepository;
+
+    @GetMapping("/years")
+    public ResponseEntity<List<AcademicYearOptionDTO>> getAvailableAcademicYears(
+            @RequestParam Long schoolId
+    ) {
+        return ResponseEntity.ok(
+                annualTimetableEntryRepository.findDistinctAcademicYearsBySchoolId(schoolId)
+        );
+    }
 
     @GetMapping("/class")
-    public ResponseEntity<List<TimetableEntry>> getClassTimetable(
+    public ResponseEntity<List<AnnualTimetableEntry>> getClassTimetable(
             @RequestParam Long schoolId,
             @RequestParam Long classRoomId,
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate weekStartDate
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd
     ) {
-        WeeklyTimetable timetable =
-                weeklyTimetableRepository
-                        .findBySchoolIdAndWeekStartDate(schoolId, weekStartDate)
-                        .orElseThrow();
-
         return ResponseEntity.ok(
-                timetableEntryRepository
-                        .findByWeeklyTimetableIdAndClassRoomIdOrderByDayOfWeekAscPeriodNumberAsc(
-                                timetable.getId(),
-                                classRoomId
+                annualTimetableEntryRepository
+                        .findBySchoolIdAndClassRoomIdAndAcademicYearStartAndAcademicYearEndAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
+                                schoolId,
+                                classRoomId,
+                                academicYearStart,
+                                academicYearEnd
+                        )
+        );
+    }
+
+    @GetMapping("/conflicts")
+    public ResponseEntity<List<AnnualTimetableEntry>> getConflicts(
+            @RequestParam Long schoolId,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd
+    ) {
+        return ResponseEntity.ok(
+                annualTimetableEntryRepository
+                        .findBySchoolIdAndAcademicYearStartAndAcademicYearEndAndStatusAndActiveTrueOrderByClassRoomIdAscDayOfWeekAscPeriodNumberAsc(
+                                schoolId,
+                                academicYearStart,
+                                academicYearEnd,
+                                AnnualTimetableEntry.Status.CONFLICT
                         )
         );
     }
@@ -49,4 +75,3 @@ public class AdminTimetableQueryController {
         return "Hello, Admin Timetable!";
     }
 }
-

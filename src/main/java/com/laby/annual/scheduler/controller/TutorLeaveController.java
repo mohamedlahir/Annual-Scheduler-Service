@@ -18,21 +18,21 @@ public class TutorLeaveController {
     private final TutorLeaveRepository tutorLeaveRepository;
     private final TutorLeaveCompensationService compensationService;
 
-    @PostMapping
-    public ResponseEntity<String> applyLeave(
-            @RequestBody TutorLeave leave
-    ) {
-        leave.setApproved(true); // assume admin approval for now
-        tutorLeaveRepository.save(leave);
-
-        // 🔥 Trigger compensation
-        compensationService.compensateTutorLeave(
-                leave.getTutorId(),
-                leave.getFromDate(),
-                leave.getToDate()
-        );
-
-        return ResponseEntity.ok("Leave applied and timetable compensated");
-    }
+//    @PostMapping
+//    public ResponseEntity<String> applyLeave(
+//            @RequestBody TutorLeave leave
+//    ) {
+//        leave.setApproved(true); // assume admin approval for now
+//        tutorLeaveRepository.save(leave);
+//
+//        // 🔥 Trigger compensation
+//        compensationService.compensateTutorLeave(
+//                leave.getTutorId(),
+//                leave.getFromDate(),
+//                leave.getToDate()
+//        );
+//
+//        return ResponseEntity.ok("Leave applied and timetable compensated");
+//    }
 }
 
