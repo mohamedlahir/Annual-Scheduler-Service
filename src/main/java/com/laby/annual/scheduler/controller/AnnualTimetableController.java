@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/scheduler/api/annual-timetable")
+@RequestMapping("/api/scheduler/annual-timetable")
 @RequiredArgsConstructor
 public class AnnualTimetableController {
 

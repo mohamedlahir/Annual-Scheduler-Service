@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/scheduler/api/admin/timetable")
+@RequestMapping("/api/scheduler/admin/timetable")
 @RequiredArgsConstructor
 public class AdminTimetableController {
 

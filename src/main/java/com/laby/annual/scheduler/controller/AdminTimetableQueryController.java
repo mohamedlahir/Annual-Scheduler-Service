@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/scheduler/api/admin/timetable")
+@RequestMapping("/api/scheduler/admin/timetable")
 @RequiredArgsConstructor
 public class AdminTimetableQueryController {
 

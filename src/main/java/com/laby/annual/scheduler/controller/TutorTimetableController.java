@@ -22,7 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/scheduler/api/tutor/timetable")
+@RequestMapping("/api/scheduler/tutor/timetable")
 @RequiredArgsConstructor
 public class TutorTimetableController {
 
