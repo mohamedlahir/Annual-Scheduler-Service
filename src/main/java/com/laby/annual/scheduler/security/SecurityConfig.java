@@ -20,8 +20,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/actuator/**").permitAll()
-                            .requestMatchers("/scheduler/**").hasAnyRole("ADMIN","STUDENT")
-//                            .requestMatchers("users/**").hasRole("ADMIN")
+                            // Permit error dispatch paths (forwarded/internal dispatches sometimes map to different path forms)
+                            .requestMatchers("/error", "/error/**", "**/error", "/**/error").permitAll()
+                            // Allow debug endpoints during development
+                            .requestMatchers("/api/scheduler/debug/**").permitAll()
+                            .requestMatchers("/api/scheduler/**").hasAnyRole("ADMIN","STUDENT")
+                            // .requestMatchers("users/**").hasRole("ADMIN")
                             .anyRequest().authenticated();
                 })
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

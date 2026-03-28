@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,9 +15,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Locale;
 
 @Component
 public class JWTFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JWTFilter.class);
 
     @Autowired
     private JWTService jwtService;
@@ -26,6 +32,10 @@ public class JWTFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();  // Changed from getServletPath to getRequestURI
+        // Log incoming request and whether Authorization header is present (do not log token value)
+        String incomingRemote = request.getRemoteAddr();
+        String incomingAuthHeader = request.getHeader("Authorization");
+        logger.debug("Incoming request [{}] from {}. Authorization header present={}", path, incomingRemote, incomingAuthHeader != null);
 
         if (path.startsWith("/actuator/health")) {
             filterChain.doFilter(request, response);
@@ -40,43 +50,65 @@ public class JWTFilter extends OncePerRequestFilter {
             try {
                 username = jwtService.extractUsername(token);
 
-                String role = jwtService.extractRole(token);
+                System.out.println("Extracted username from token: " + username);
+
+                // Extract raw role claim (may be null or may already contain ROLE_ prefix)
+                String rawRole = null;
+                try {
+                    rawRole = jwtService.extractRole(token);
+                    logger.debug("Extracted raw role claim from token for user {}: {}", username, rawRole);
+                } catch (Exception e) {
+                    logger.warn("Failed to extract role claim from token for user {}: {}", username, e.getMessage());
+                }
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // Create authority with ROLE_ prefix
-                    org.springframework.security.core.authority.SimpleGrantedAuthority authority =
-                            new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role);
-
-                    org.springframework.security.core.userdetails.User userDetails =
-                            new org.springframework.security.core.userdetails.User(
-                                    username,
-                                    "",
-                                    java.util.Collections.singletonList(authority)
-                            );
-
-                    if (jwtService.isTokenValid(token, userDetails)) {
-
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    if (rawRole == null || rawRole.isBlank()) {
+                        logger.warn("JWT contains no role claim for user {}. Request will continue unauthenticated.", username);
 
                     } else {
+                        // Normalize: strip leading ROLE_ if present, uppercase
+                        String normalized = rawRole.trim();
+                        System.out.println("Role claim before normalization: '" + rawRole + "'");
+                        if (normalized.toUpperCase(Locale.ROOT).startsWith("ROLE_")) {
+                            normalized = normalized.substring(5);
+                        }
+                        normalized = normalized.toUpperCase(Locale.ROOT);
+                        System.out.println("Role claim after normalization: '" + normalized + "'");
+                        // Build authority with ROLE_ prefix as expected by Spring's hasRole checks
+                        org.springframework.security.core.authority.SimpleGrantedAuthority authority =
+                                new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + normalized);
+System.out.println("Constructed authority: " + authority);
+                        org.springframework.security.core.userdetails.User userDetails =
+                                new org.springframework.security.core.userdetails.User(
+                                        username,
+                                        "",
+                                        Collections.singletonList(authority)
+                                );
 
+                        if (jwtService.isTokenValid(token, userDetails)) {
+                            System.out.println("Token is valid for user " + username + " with role " + normalized);
+                            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authToken);
+                            logger.debug("Set authentication for user {} with role {}", username, normalized);
+
+                        } else {
+                            logger.warn("JWT token is not valid for user {}", username);
+                        }
                     }
                 }
             } catch (Exception e) {
-
-                e.printStackTrace();
+                logger.error("Error processing JWT authentication", e);
             }
         } else {
-
+            // No Authorization header - continue filter chain (request will be unauthenticated)
+            logger.debug("No Bearer token found in request to {}", path);
         }
 
         filterChain.doFilter(request, response);
     }
 }
-

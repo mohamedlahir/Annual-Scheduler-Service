@@ -4,6 +4,9 @@ import com.laby.annual.scheduler.DTO.AcademicYearOptionDTO;
 import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
 import com.laby.annual.scheduler.repository.AnnualTimetableEntryRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,9 +15,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/scheduler/api/admin/timetable")
+// Corrected base path: remove duplicate 'api' segment so it matches requests under /api/scheduler/admin/timetable
+@RequestMapping("/api/scheduler/admin/timetable")
 @RequiredArgsConstructor
 public class AdminTimetableQueryController {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminTimetableQueryController.class);
 
     private final AnnualTimetableEntryRepository annualTimetableEntryRepository;
 
@@ -22,6 +28,7 @@ public class AdminTimetableQueryController {
     public ResponseEntity<List<AcademicYearOptionDTO>> getAvailableAcademicYears(
             @RequestParam Long schoolId
     ) {
+        logger.debug("Entered getAvailableAcademicYears for schoolId={}. Authentication present={}", schoolId, SecurityContextHolder.getContext().getAuthentication()!=null);
         return ResponseEntity.ok(
                 annualTimetableEntryRepository.findDistinctAcademicYearsBySchoolId(schoolId)
         );

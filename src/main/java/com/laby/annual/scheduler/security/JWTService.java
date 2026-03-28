@@ -4,15 +4,20 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 @Service
 public class JWTService {
+    private static final Logger logger = LoggerFactory.getLogger(JWTService.class);
+
     // IMPORTANT: In a production environment, this secret should be stored securely.
     private static final String SECRET_KEY = "QjRKaGh0VmJxS3M1eWdOVmZzWkN1M0poeEdDTHF6WjY=";
 
@@ -24,26 +29,6 @@ public class JWTService {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
-
-//    // Updated: Accept role as a string and add as a claim
-//    public String generateToken(String username, String role) {
-//        Map<String, Object> claims = new HashMap<>();
-//        claims.put("role", role);
-//        return Jwts.builder()
-//                .claims()
-//                .add(claims)
-//                .subject(username)
-//                .issuedAt(new Date(System.currentTimeMillis()))
-//                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 hour
-//                .and()
-//                .signWith(getSignInKey())
-//                .compact();
-//    }
-//
-//    // Overload for backward compatibility (if needed)
-    ////    public String generateToken(String username) {
-    ////        return generateToken(username, "ROLE_USER");
-    ////    }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
@@ -65,10 +50,10 @@ public class JWTService {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-            System.out.println("Extracted claims from token: " + claims);
+            logger.debug("Extracted claims from token: {}", claims);
             return claims;
         } catch (Exception e) {
-            System.out.println("Error parsing token: " + e.getMessage());
+            logger.error("Error parsing token: {}", e.getMessage());
             throw e;
         }
     }
@@ -78,19 +63,54 @@ public class JWTService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // New: Extract role from token as a string
+    // New: Extract role from token as a string (handles different claim shapes)
     public String extractRole(String token) {
         Claims claims = extractAllClaims(token);
-        return claims.get("role", String.class);
+        if (claims == null) return null;
+
+        Object roleObj = claims.get("role");
+        if (roleObj instanceof String) {
+            return (String) roleObj;
+        }
+
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof String) {
+            return (String) rolesObj;
+        }
+        if (rolesObj instanceof List) {
+            List<?> list = (List<?>) rolesObj;
+            if (!list.isEmpty()) return String.valueOf(list.get(0));
+        }
+
+        Object authorities = claims.get("authorities");
+        if (authorities instanceof List) {
+            List<?> list = (List<?>) authorities;
+            if (!list.isEmpty()) return String.valueOf(list.get(0));
+        }
+
+        logger.debug("No role-like claim found in token claims: {}", claims.keySet());
+        return null;
     }
 
     public Long extractSchoolId(String token) {
         Claims claims = extractAllClaims(token);
-        return claims.get("schoolId", Long.class);
+        if (claims == null) return null;
+        Object val = claims.get("schoolId");
+        if (val instanceof Number) {
+            return ((Number) val).longValue();
+        }
+        try {
+            return claims.get("schoolId", Long.class);
+        } catch (Exception e) {
+            logger.debug("Could not extract schoolId as Long directly: {}", e.getMessage());
+            return null;
+        }
     }
 
     public String extractProfileId(String token) {
         Claims claims = extractAllClaims(token);
-        return claims.get("profileId", String.class);
+        if (claims == null) return null;
+        Object val = claims.get("profileId");
+        return val == null ? null : String.valueOf(val);
     }
 }

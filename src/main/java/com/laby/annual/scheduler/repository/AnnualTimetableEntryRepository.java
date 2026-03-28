@@ -49,11 +49,13 @@ public interface AnnualTimetableEntryRepository extends JpaRepository<AnnualTime
             LocalDate academicYearEnd
     );
 
+    // Return all active annual timetable entries for a school within the specified academic year
     List<AnnualTimetableEntry> findBySchoolIdAndAcademicYearStartAndAcademicYearEndAndActiveTrue(
             Long schoolId,
             LocalDate academicYearStart,
             LocalDate academicYearEnd
     );
+
 
     List<AnnualTimetableEntry> findBySchoolIdAndAcademicYearStartAndAcademicYearEndAndStatusAndActiveTrueOrderByClassRoomIdAscDayOfWeekAscPeriodNumberAsc(
             Long schoolId,
@@ -73,4 +75,13 @@ public interface AnnualTimetableEntryRepository extends JpaRepository<AnnualTime
         order by e.academicYearStart desc, e.academicYearEnd desc
     """)
     List<AcademicYearOptionDTO> findDistinctAcademicYearsBySchoolId(Long schoolId);
+
+    // New finder: return annual timetable entries for any of the given tutor IDs
+    // where the provided date falls inside the academic year range.
+    List<AnnualTimetableEntry> findBySchoolIdAndTutorIdInAndAcademicYearStartLessThanEqualAndAcademicYearEndGreaterThanEqualOrderByDayOfWeekAscPeriodNumberAsc(
+            Long schoolId,
+            List<String> tutorIds,
+            LocalDate date1,
+            LocalDate date2
+    );
 }

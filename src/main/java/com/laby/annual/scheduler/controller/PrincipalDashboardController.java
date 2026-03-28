@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/scheduler/api/principal/dashboard")
+@RequestMapping("/api/scheduler/principal/dashboard")
 @RequiredArgsConstructor
 public class PrincipalDashboardController {
 

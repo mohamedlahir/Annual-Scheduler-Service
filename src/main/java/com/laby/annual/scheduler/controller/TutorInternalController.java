@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/scheduler/internal/tutor")
+@RequestMapping("/api/scheduler/internal/tutor")
 @RequiredArgsConstructor
 public class TutorInternalController {
 
