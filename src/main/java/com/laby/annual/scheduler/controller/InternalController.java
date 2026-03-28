@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/scheduler/internal/setup")
+@RequestMapping("/api/scheduler/internal/setup")
 @RequiredArgsConstructor
 public class InternalController {
 

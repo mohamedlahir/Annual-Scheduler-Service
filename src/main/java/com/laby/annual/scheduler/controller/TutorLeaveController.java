@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/scheduler/api/tutor/leave")
+@RequestMapping("/api/scheduler/tutor/leave")
 @RequiredArgsConstructor
 public class TutorLeaveController {
 
