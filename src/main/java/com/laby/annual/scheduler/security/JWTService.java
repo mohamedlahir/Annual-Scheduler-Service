@@ -86,11 +86,33 @@ public class JWTService {
 
     public Long extractSchoolId(String token) {
         Claims claims = extractAllClaims(token);
-        return claims.get("schoolId", Long.class);
+        Object value = claims.get("schoolId");
+        if (value == null) return null;
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Long.valueOf((String) value);
+            } catch (NumberFormatException e) {
+                System.out.println("Unable to parse schoolId claim to Long: " + value);
+                return null;
+            }
+        }
+        System.out.println("Unexpected type for schoolId claim: " + value.getClass());
+        return null;
     }
 
     public String extractProfileId(String token) {
         Claims claims = extractAllClaims(token);
         return claims.get("profileId", String.class);
+    }
+
+    /**
+     * Return the raw claim value for the given name (may be String, Number, List, etc).
+     */
+    public Object extractClaimObject(String token, String claimName) {
+        Claims claims = extractAllClaims(token);
+        return claims.get(claimName);
     }
 }

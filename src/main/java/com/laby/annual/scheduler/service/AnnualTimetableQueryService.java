@@ -83,11 +83,11 @@ public class AnnualTimetableQueryService {
         }
 
         List<AnnualTimetableEntry> baseEntries = annualTimetableEntryRepository
-                .findBySchoolIdAndTutorIdInAndAcademicYearStartAndAcademicYearEndAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
+                .findBySchoolIdAndTutorIdInAndAcademicYearStartLessThanEqualAndAcademicYearEndGreaterThanEqualAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
                         schoolId,
                         candidates,
-                        academicYearStart,
-                        academicYearEnd
+                        academicYearEnd,
+                        academicYearStart
                 );
 
         if (!shouldApplyDateOverlay(targetDate, academicYearStart, academicYearEnd)) {
@@ -229,4 +229,3 @@ public class AnnualTimetableQueryService {
         return copy;
     }
 }
-

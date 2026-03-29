@@ -56,6 +56,13 @@ public interface AnnualTimetableEntryRepository extends JpaRepository<AnnualTime
             LocalDate academicYearEnd
     );
 
+    List<AnnualTimetableEntry> findBySchoolIdAndTutorIdInAndAcademicYearStartLessThanEqualAndAcademicYearEndGreaterThanEqualAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
+            Long schoolId,
+            List<String> tutorIds,
+            LocalDate date1,
+            LocalDate date2
+    );
+
     List<AnnualTimetableEntry> findByIdIn(List<Long> ids);
 
     List<AnnualTimetableEntry> findBySchoolIdAndAcademicYearStartAndAcademicYearEndAndActiveTrue(

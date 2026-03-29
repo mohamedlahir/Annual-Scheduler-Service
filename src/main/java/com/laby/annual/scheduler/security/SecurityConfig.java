@@ -19,9 +19,14 @@ public class SecurityConfig {
         return httpSecurity
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> {
+                    // allow health and actuator
                     auth.requestMatchers("/actuator/**").permitAll()
-                            .requestMatchers("/api/scheduler/**").hasAnyRole("ADMIN","STUDENT")
-//                            .requestMatchers("users/**").hasRole("ADMIN")
+                            // allow Spring error endpoint so error dispatches don't get blocked
+                            .requestMatchers("/error").permitAll()
+                            // allow debug endpoints (used during development)
+                            .requestMatchers("/api/scheduler/debug/**").permitAll()
+                            // protect scheduler APIs - require role ADMIN, STUDENT or TUTOR
+                            .requestMatchers("/api/scheduler/**").hasAnyRole("ADMIN","STUDENT","TUTOR")
                             .anyRequest().authenticated();
                 })
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

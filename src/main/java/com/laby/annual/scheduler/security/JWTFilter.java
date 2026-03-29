@@ -37,41 +37,53 @@ public class JWTFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            try {
-                username = jwtService.extractUsername(token);
+                try {
+                    username = jwtService.extractUsername(token);
 
-                String role = jwtService.extractRole(token);
+                    String role = jwtService.extractRole(token);
 
-                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // Create authority with ROLE_ prefix
-                    org.springframework.security.core.authority.SimpleGrantedAuthority authority =
-                            new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role);
-
-                    org.springframework.security.core.userdetails.User userDetails =
-                            new org.springframework.security.core.userdetails.User(
-                                    username,
-                                    "",
-                                    java.util.Collections.singletonList(authority)
-                            );
-
-                    if (jwtService.isTokenValid(token, userDetails)) {
-
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-
-                    } else {
-
+                    if (role == null) {
+                        // fallback: try to read 'roles' claim or default to STUDENT
+                        Object rolesClaim = jwtService.extractClaimObject(token, "roles");
+                        if (rolesClaim != null) {
+                            role = rolesClaim.toString();
+                        } else {
+                            role = "STUDENT";
+                        }
                     }
-                }
-            } catch (Exception e) {
 
-                e.printStackTrace();
-            }
+                    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                        // Ensure role doesn't already contain ROLE_ prefix
+                        String normalizedRole = role.startsWith("ROLE_") ? role.substring(5) : role;
+
+                        // Create authority with ROLE_ prefix
+                        org.springframework.security.core.authority.SimpleGrantedAuthority authority =
+                                new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + normalizedRole);
+
+                        org.springframework.security.core.userdetails.User userDetails =
+                                new org.springframework.security.core.userdetails.User(
+                                        username,
+                                        "",
+                                        java.util.Collections.singletonList(authority)
+                                );
+
+                        if (jwtService.isTokenValid(token, userDetails)) {
+
+                            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                        } else {
+                            System.out.println("JWT token invalid for user: " + username);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
         } else {
 
         }
