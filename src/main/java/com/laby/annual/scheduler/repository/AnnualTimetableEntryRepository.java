@@ -78,6 +78,14 @@ public interface AnnualTimetableEntryRepository extends JpaRepository<AnnualTime
             AnnualTimetableEntry.Status status
     );
 
+    List<AnnualTimetableEntry> findBySchoolIdAndTutorIdInAndAcademicYearStartAndAcademicYearEndAndStatusAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
+            Long schoolId,
+            List<String> tutorIds,
+            LocalDate academicYearStart,
+            LocalDate academicYearEnd,
+            AnnualTimetableEntry.Status status
+    );
+
     @Query("""
         select distinct new com.laby.annual.scheduler.DTO.AcademicYearOptionDTO(
             e.academicYearStart,

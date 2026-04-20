@@ -80,6 +80,35 @@ public class AdminTimetableQueryController {
         );
     }
 
+    @GetMapping("/conflicts/tutor")
+    public ResponseEntity<List<AnnualTimetableEntry>> getTutorConflicts(
+            @RequestParam Long schoolId,
+            @RequestParam String tutorId,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearStart,
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate academicYearEnd
+    ) {
+        Set<String> tutorCandidates = new LinkedHashSet<>();
+        String normalized = tutorId.trim();
+        tutorCandidates.add(normalized);
+        tutorRepository.findByTutorCode(normalized).map(com.laby.annual.scheduler.entity.Tutor::getTutorId).ifPresent(tutorCandidates::add);
+        tutorRepository.findByTutorId(normalized).map(com.laby.annual.scheduler.entity.Tutor::getTutorCode).ifPresent(tutorCandidates::add);
+
+        return ResponseEntity.ok(
+                annualTimetableEntryRepository
+                        .findBySchoolIdAndTutorIdInAndAcademicYearStartAndAcademicYearEndAndStatusAndActiveTrueOrderByDayOfWeekAscPeriodNumberAsc(
+                                schoolId,
+                                new ArrayList<>(tutorCandidates),
+                                academicYearStart,
+                                academicYearEnd,
+                                AnnualTimetableEntry.Status.CONFLICT
+                        )
+        );
+    }
+
     @GetMapping("/tutor")
     public ResponseEntity<List<AnnualTimetableEntry>> getTutorTimetable(
             @RequestParam Long schoolId,

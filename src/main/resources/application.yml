@@ -27,7 +27,8 @@ spring:
       discovery:
         service-name: annual-scheduler-service
         register: true
-        prefer-ip-address: true
+        prefer-ip-address: false
+        hostname: annual-scheduler-service
         health-check-path: /actuator/health
         health-check-interval: 10s
         instance-id: annual-scheduler-service-${server.port}

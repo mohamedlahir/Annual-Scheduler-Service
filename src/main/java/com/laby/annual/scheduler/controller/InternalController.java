@@ -87,11 +87,28 @@ public class InternalController {
         return ResponseEntity.ok("Tutors imported successfully");
     }
 
+    @PostMapping("/upload/tutors-only")
+    public ResponseEntity<String> uploadTutorsOnly(
+            @RequestParam MultipartFile tutorsFile
+//            @RequestParam MultipartFile tutorSubjectsFile
+    ) {
+        batchImportService.importTutorsOnly(tutorsFile);
+        return ResponseEntity.ok("Tutors imported successfully");
+    }
+
     @PostMapping("/upload/subjects")
     public ResponseEntity<String> uploadSubjects(
             @RequestParam MultipartFile subjectsFile
     ) {
         batchImportService.importSubjects(subjectsFile);
+        return ResponseEntity.ok("Subjects imported successfully");
+    }
+
+    @PostMapping("/upload/tutor-subjects")
+    public ResponseEntity<String> uploadTutorSubjects(
+            @RequestParam MultipartFile subjectsFile
+    ) {
+        batchImportService.importTutorSubjectsOnly(subjectsFile);
         return ResponseEntity.ok("Subjects imported successfully");
     }
 
