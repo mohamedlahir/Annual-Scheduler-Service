@@ -35,7 +35,7 @@ public class TutorTimetableController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate academicYearStart,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate academicYearEnd,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate,
-            @RequestParam(required = false) String tutorId,
+            @RequestParam(required = true) String tutorId,
             HttpServletRequest request
     ) {
         String token = extractToken(request);
@@ -45,6 +45,7 @@ public class TutorTimetableController {
 
         String profileId = jwtService.extractProfileId(token);
         Long schoolId = jwtService.extractSchoolId(token);
+        System.out.println("Extracted from token - profileId: " + profileId + ", schoolId: " + schoolId);
 
         if (schoolId == null) {
             return ResponseEntity.status(403).build();
@@ -52,6 +53,7 @@ public class TutorTimetableController {
 
         Set<String> tutorCandidates = resolveTutorCandidates(profileId, tutorId);
         if (tutorCandidates.isEmpty()) {
+            System.out.println("No valid tutor candidates found for profileId: " + profileId + " and tutorId: " + tutorId);
             return ResponseEntity.ok(List.of());
         }
 
