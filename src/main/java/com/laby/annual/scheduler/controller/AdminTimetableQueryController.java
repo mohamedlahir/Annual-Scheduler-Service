@@ -1,7 +1,9 @@
 package com.laby.annual.scheduler.controller;
 
 import com.laby.annual.scheduler.DTO.AcademicYearOptionDTO;
+import com.laby.annual.scheduler.DTO.ClassTimetableEntryDTO;
 import com.laby.annual.scheduler.entity.AnnualTimetableEntry;
+import com.laby.annual.scheduler.entity.Tutor;
 import com.laby.annual.scheduler.repository.AnnualTimetableEntryRepository;
 import com.laby.annual.scheduler.repository.TutorRepository;
 import com.laby.annual.scheduler.service.AnnualTimetableQueryService;
@@ -14,7 +16,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/scheduler/admin/timetable")
@@ -35,7 +40,7 @@ public class AdminTimetableQueryController {
     }
 
     @GetMapping("/class")
-    public ResponseEntity<List<AnnualTimetableEntry>> getClassTimetable(
+    public ResponseEntity<List<ClassTimetableEntryDTO>> getClassTimetable(
             @RequestParam Long schoolId,
             @RequestParam Long classRoomId,
             @RequestParam
@@ -48,14 +53,24 @@ public class AdminTimetableQueryController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate targetDate
     ) {
+        List<AnnualTimetableEntry> entries = annualTimetableQueryService.getClassTimetable(
+                schoolId,
+                classRoomId,
+                academicYearStart,
+                academicYearEnd,
+                targetDate
+        );
+        Map<String, String> tutorNameById = tutorRepository.findBySchoolId(schoolId).stream()
+                .collect(Collectors.toMap(
+                        Tutor::getTutorId,
+                        this::resolveTutorName,
+                        (first, second) -> first
+                ));
+        List<ClassTimetableEntryDTO> response = entries.stream()
+                .map(entry -> toClassTimetableEntryDTO(entry, tutorNameById))
+                .toList();
         return ResponseEntity.ok(
-                annualTimetableQueryService.getClassTimetable(
-                        schoolId,
-                        classRoomId,
-                        academicYearStart,
-                        academicYearEnd,
-                        targetDate
-                )
+                response
         );
     }
 
@@ -138,5 +153,42 @@ public class AdminTimetableQueryController {
                         targetDate
                 )
         );
+    }
+
+    private ClassTimetableEntryDTO toClassTimetableEntryDTO(AnnualTimetableEntry entry, Map<String, String> tutorNameById) {
+        ClassTimetableEntryDTO dto = new ClassTimetableEntryDTO();
+        dto.setId(entry.getId());
+        dto.setSchoolId(entry.getSchoolId());
+        dto.setClassRoomId(entry.getClassRoomId());
+        dto.setSubjectId(entry.getSubjectId());
+        dto.setSubjectName(entry.getSubjectName());
+        dto.setTutorId(entry.getTutorId());
+        dto.setTutorName(entry.getTutorId() == null ? null : tutorNameById.get(entry.getTutorId()));
+        dto.setDayOfWeek(entry.getDayOfWeek());
+        dto.setPeriodNumber(entry.getPeriodNumber());
+        dto.setAcademicYearStart(entry.getAcademicYearStart());
+        dto.setAcademicYearEnd(entry.getAcademicYearEnd());
+        dto.setStatus(entry.getStatus());
+        dto.setConflictReason(entry.getConflictReason());
+        dto.setActive(entry.isActive());
+        return dto;
+    }
+
+    private String resolveTutorName(Tutor tutor) {
+        if (tutor == null) {
+            return null;
+        }
+        if (tutor.getName() != null && !tutor.getName().isBlank()) {
+            return tutor.getName().trim();
+        }
+        String fullName = ((tutor.getFirstName() == null ? "" : tutor.getFirstName().trim()) + " "
+                + (tutor.getLastName() == null ? "" : tutor.getLastName().trim())).trim();
+        if (!fullName.isBlank()) {
+            return fullName;
+        }
+        if (tutor.getTutorCode() != null && !tutor.getTutorCode().isBlank()) {
+            return tutor.getTutorCode().trim();
+        }
+        return Objects.toString(tutor.getTutorId(), null);
     }
 }
